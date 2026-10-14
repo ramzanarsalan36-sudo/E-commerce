@@ -29,7 +29,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80',
     rating: '5',
     disc: 12,
-    amount: 1199,
+    amount: 144900,
     is_avalaible: true
   },
   {
@@ -38,7 +38,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80',
     rating: '4.9',
     disc: 15,
-    amount: 399,
+    amount: 29990,
     is_avalaible: true
   },
   {
@@ -47,7 +47,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=800&q=80',
     rating: '4.8',
     disc: 20,
-    amount: 649,
+    amount: 59999,
     is_avalaible: true
   },
   {
@@ -56,7 +56,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=800&q=80',
     rating: '5',
     disc: 10,
-    amount: 180,
+    amount: 16995,
     is_avalaible: true
   },
   {
@@ -65,7 +65,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=800&q=80',
     rating: '4.7',
     disc: 0,
-    amount: 329,
+    amount: 24500,
     is_avalaible: true
   },
   {
@@ -74,7 +74,7 @@ const SAMPLE_PRODUCTS = [
     img_url: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80',
     rating: '5',
     disc: 5,
-    amount: 1599,
+    amount: 179999,
     is_avalaible: false
   }
 ];

@@ -172,7 +172,7 @@
           <div class="preview-details">
             <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase;" id="modalProductBrand">Brand</div>
             <div class="preview-name" id="modalProductName">Product Name</div>
-            <div class="preview-price" id="modalProductPrice">$0</div>
+            <div class="preview-price" id="modalProductPrice">₹0</div>
           </div>
         </div>
 
@@ -266,7 +266,7 @@
       <div class="cart-drawer-footer">
         <div class="cart-summary-row">
           <span>Subtotal</span>
-          <span id="cartSubtotal">$0.00</span>
+          <span id="cartSubtotal">₹0</span>
         </div>
         <div class="cart-summary-row">
           <span>Shipping & Insurance</span>
@@ -274,7 +274,7 @@
         </div>
         <div class="cart-summary-row cart-total-row">
           <span>Estimated Total</span>
-          <span id="cartTotal" style="color: var(--primary);">$0.00</span>
+          <span id="cartTotal" style="color: var(--primary);">₹0</span>
         </div>
 
         <button class="btn-primary" style="width: 100%; padding: 0.85rem;" id="checkoutBtn" onclick="checkoutFromCart()">
@@ -454,9 +454,9 @@
       return amount;
     }
 
-    // Format currency
+    // Format currency in Indian Rupees (₹)
     function formatCurrency(num) {
-      return '$' + Number(num).toLocaleString('en-US');
+      return '₹' + Number(num).toLocaleString('en-IN');
     }
 
     // Fallback Image Handler (for pending user URLs)
