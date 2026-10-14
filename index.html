@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUMEN LUXE | Premium Electronics & Curated Lifestyle</title>
+  <meta name="description" content="Shop premium electronics, audio, and luxury lifestyle products with instant delivery and secure ordering.">
+  
+  <!-- Modern Font & Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Supabase JS SDK (Official CDN v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand-logo" id="brand-logo-link">
+        <div class="brand-icon">⚡</div>
+        <span>LUMEN<span style="color: var(--primary);">LUXE</span></span>
+        <span class="brand-badge">STORE</span>
+      </a>
+
+      <!-- Real-time Live Search -->
+      <div class="nav-search">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-input" 
+            placeholder="Search products, brands, models..." 
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <!-- Navigation Actions -->
+      <div class="nav-actions">
+        <a href="admin.html" class="nav-link" id="adminPortalLink" title="Product Management & Orders">
+          <span>⚙️ Admin & Orders</span>
+        </a>
+
+        <!-- Cart Button -->
+        <button class="cart-btn" id="openCartBtn" aria-label="View Shopping Cart">
+          <span>🛒</span>
+          <span>Cart</span>
+          <span class="cart-badge" id="cartCount">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="hero-tag">
+          <span>✨ Curated Collection 2026</span>
+        </div>
+        <h1 class="hero-title">
+          Next-Generation Tech, <span>Unrivaled Luxury.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Discover handpicked flagship technology and precision audio. Seamless one-click ordering powered by Supabase.
+        </p>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="totalProductsCount">--</span>
+            <span class="stat-label">Products Listed</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="inStockCount">--</span>
+            <span class="stat-label">In Stock Ready</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">24/7</span>
+            <span class="stat-label">Priority Dispatch</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Storefront Catalog -->
+  <main class="main-container">
+    <!-- Filters & Sorting Bar -->
+    <div class="filter-bar">
+      <!-- Dynamic Brand Chips -->
+      <div class="brand-chips" id="brandChipsContainer">
+        <button class="chip-btn active" data-brand="all">All Brands</button>
+      </div>
+
+      <!-- Right Controls: Sort & Stock Toggle -->
+      <div class="filter-controls">
+        <label class="toggle-filter">
+          <input type="checkbox" id="inStockOnlyCheckbox">
+          <span>In Stock Only</span>
+        </label>
+
+        <select id="sortSelect" class="custom-select" aria-label="Sort products">
+          <option value="featured">Featured / Newest</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="rating-desc">Highest Rated</option>
+          <option value="discount-desc">Biggest Discount</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Database Connection / RLS Notification Banner (Hidden by default, shown if RLS needs config) -->
+    <div id="dbAlertBanner" style="display: none; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+      <div>
+        <strong style="color: #a5b4fc;">💡 Supabase Setup Notice:</strong>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;" id="dbAlertText">
+          Connect your database tables or populate demo products in the Admin portal.
+        </p>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button onclick="seedDemoCatalog()" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+          🌱 Seed Demo Items
+        </button>
+        <a href="admin.html#database" class="nav-link" style="border: 1px solid var(--border-subtle); padding: 0.5rem 0.85rem; font-size: 0.8rem;">
+          View SQL Setup
+        </a>
+      </div>
+    </div>
+
+    <!-- Product Grid Container -->
+    <section>
+      <div class="products-grid" id="productsGrid">
+        <!-- Loading Skeletons rendered by default -->
+        <div class="product-card skeleton" style="height: 380px;"></div>
+        <div class="product-card skeleton" style="height: 380px;"></div>
+        <div class="product-card skeleton" style="height: 380px;"></div>
+        <div class="product-card skeleton" style="height: 380px;"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyCatalogState" style="display: none; text-align: center; padding: 4rem 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem;">No products match your criteria</h3>
+        <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 1.5rem auto;">
+          Try adjusting your search terms, removing brand filters, or add new products in the Admin panel.
+        </p>
+        <button onclick="resetFilters()" class="btn-primary" style="margin: 0 auto;">Reset Filters</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================================
+       ORDER MODAL (Direct 1-Click Purchase)
+       Submits directly to public.order_table
+       ====================================================================== -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title">Place Your Order</h2>
+        <button class="modal-close" onclick="closeOrderModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Product Summary in Modal -->
+        <div class="order-product-preview" id="orderProductPreview">
+          <img src="" alt="" class="preview-thumb" id="modalProductThumb">
+          <div class="preview-details">
+            <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase;" id="modalProductBrand">Brand</div>
+            <div class="preview-name" id="modalProductName">Product Name</div>
+            <div class="preview-price" id="modalProductPrice">$0</div>
+          </div>
+        </div>
+
+        <!-- Order Form Fields matching schema: product_id, user_name, address, number -->
+        <form id="orderForm" onsubmit="handleOrderSubmit(event)">
+          <input type="hidden" id="orderProductId">
+
+          <div class="form-group">
+            <label class="form-label" for="orderUserName">Full Name *</label>
+            <input 
+              type="text" 
+              id="orderUserName" 
+              class="form-control" 
+              placeholder="e.g. Alexander Vance" 
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="orderNumber">Phone Number *</label>
+            <input 
+              type="tel" 
+              id="orderNumber" 
+              class="form-control" 
+              placeholder="e.g. 9876543210 (digits only)" 
+              pattern="[0-9]{8,15}"
+              title="Please enter a valid phone number with digits only (8-15 digits)"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="orderAddress">Delivery Address *</label>
+            <textarea 
+              id="orderAddress" 
+              class="form-control" 
+              placeholder="Street name, suite/apartment, city, postal code"
+              required
+            ></textarea>
+          </div>
+
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🔒</span>
+            <span>Your order details will be securely saved in Supabase <code>order_table</code>.</span>
+          </div>
+
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; background: transparent;">
+            <button type="button" class="nav-link" onclick="closeOrderModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="submitOrderBtn">
+              <span id="submitOrderSpinner" style="display: none;">⏳ </span>
+              <span>Confirm & Place Order</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       QUICK VIEW PRODUCT MODAL
+       ====================================================================== -->
+  <div class="modal-overlay" id="quickViewModal">
+    <div class="modal-dialog" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="qvTitle">Product Details</h2>
+        <button class="modal-close" onclick="closeQuickView()">&times;</button>
+      </div>
+      <div class="modal-body" id="qvBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       CART SLIDE-OVER DRAWER
+       ====================================================================== -->
+  <div class="cart-drawer-overlay" id="cartOverlay" onclick="handleOverlayClick(event)">
+    <div class="cart-drawer">
+      <div class="cart-drawer-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.2rem;">🛒</span>
+          <h2 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;">Shopping Bag</h2>
+        </div>
+        <button class="modal-close" onclick="closeCart()">&times;</button>
+      </div>
+
+      <div class="cart-items-list" id="cartItemsList">
+        <!-- Cart Items loaded from LocalStorage -->
+      </div>
+
+      <div class="cart-drawer-footer">
+        <div class="cart-summary-row">
+          <span>Subtotal</span>
+          <span id="cartSubtotal">$0.00</span>
+        </div>
+        <div class="cart-summary-row">
+          <span>Shipping & Insurance</span>
+          <span style="color: var(--success); font-weight: 600;">FREE</span>
+        </div>
+        <div class="cart-summary-row cart-total-row">
+          <span>Estimated Total</span>
+          <span id="cartTotal" style="color: var(--primary);">$0.00</span>
+        </div>
+
+        <button class="btn-primary" style="width: 100%; padding: 0.85rem;" id="checkoutBtn" onclick="checkoutFromCart()">
+          Proceed to Order
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="supabase-client.js"></script>
+  <script>
+    // Application State
+    let allProducts = [];
+    let selectedBrand = 'all';
+    let searchQuery = '';
+    let inStockOnly = false;
+    let sortBy = 'featured';
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      initEventListeners();
+      updateCartUI();
+      await loadProducts();
+    });
+
+    function initEventListeners() {
+      // Live Search
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderProducts();
+      });
+
+      // Stock Toggle
+      document.getElementById('inStockOnlyCheckbox').addEventListener('change', (e) => {
+        inStockOnly = e.target.checked;
+        renderProducts();
+      });
+
+      // Sort Select
+      document.getElementById('sortSelect').addEventListener('change', (e) => {
+        sortBy = e.target.value;
+        renderProducts();
+      });
+
+      // Cart Buttons
+      document.getElementById('openCartBtn').addEventListener('click', openCart);
+
+      // Listen for Cart updates
+      window.addEventListener('cart-updated', () => {
+        updateCartUI();
+      });
+    }
+
+    // Load products from Supabase
+    async function loadProducts() {
+      const grid = document.getElementById('productsGrid');
+      const dbAlert = document.getElementById('dbAlertBanner');
+
+      try {
+        const products = await ProductService.getAll();
+        console.log(`Loaded ${products.length} products from Supabase`);
+
+        if (products && products.length > 0) {
+          allProducts = products;
+          dbAlert.style.display = 'none';
+        } else {
+          // Empty DB: show gentle fallback demo data so the page looks gorgeous immediately
+          console.warn('Database returned 0 products. Displaying sample products for preview.');
+          allProducts = window.SAMPLE_PRODUCTS.map((p, idx) => ({ ...p, id: idx + 1 }));
+          dbAlert.style.display = 'flex';
+          document.getElementById('dbAlertText').textContent = 
+            'Your Supabase product table is currently empty. Showing demo items. You can seed them permanently or add your own in the Admin portal!';
+        }
+      } catch (err) {
+        console.error('Error fetching products from Supabase:', err);
+        allProducts = window.SAMPLE_PRODUCTS.map((p, idx) => ({ ...p, id: idx + 1 }));
+        
+        dbAlert.style.display = 'flex';
+        if (err.isRlsError) {
+          document.getElementById('dbAlertText').innerHTML = 
+            '<strong>Supabase RLS active:</strong> Public read policy needed. Check <a href="admin.html#database" style="color:var(--primary); text-decoration:underline;">Admin &gt; Database SQL</a> to run the 1-click script.';
+        } else {
+          document.getElementById('dbAlertText').textContent = 
+            `Connection notice: ${err.message || 'Connecting with sample preview.'}`;
+        }
+      }
+
+      // Update counters
+      updateStats();
+      renderBrandChips();
+      renderProducts();
+    }
+
+    // Update Statistics in Hero
+    function updateStats() {
+      document.getElementById('totalProductsCount').textContent = allProducts.length;
+      const inStock = allProducts.filter(p => p.is_avalaible).length;
+      document.getElementById('inStockCount').textContent = inStock;
+    }
+
+    // Generate Dynamic Brand Filter Chips
+    function renderBrandChips() {
+      const container = document.getElementById('brandChipsContainer');
+      const brands = ['all', ...new Set(allProducts.map(p => p.company_name).filter(Boolean))];
+
+      container.innerHTML = brands.map(brand => `
+        <button 
+          class="chip-btn ${brand === selectedBrand ? 'active' : ''}" 
+          data-brand="${brand}"
+          onclick="selectBrand('${brand}')"
+        >
+          ${brand === 'all' ? 'All Brands' : brand}
+        </button>
+      `).join('');
+    }
+
+    function selectBrand(brand) {
+      selectedBrand = brand;
+      renderBrandChips();
+      renderProducts();
+    }
+
+    function resetFilters() {
+      selectedBrand = 'all';
+      searchQuery = '';
+      inStockOnly = false;
+      document.getElementById('searchInput').value = '';
+      document.getElementById('inStockOnlyCheckbox').checked = false;
+      renderBrandChips();
+      renderProducts();
+    }
+
+    // Filter and Sort Products
+    function getFilteredProducts() {
+      return allProducts.filter(product => {
+        // Brand filter
+        if (selectedBrand !== 'all' && product.company_name?.toLowerCase() !== selectedBrand.toLowerCase()) {
+          return false;
+        }
+        // In-stock filter
+        if (inStockOnly && !product.is_avalaible) {
+          return false;
+        }
+        // Search query (product_name, company_name)
+        if (searchQuery) {
+          const matchName = product.product_name?.toLowerCase().includes(searchQuery);
+          const matchBrand = product.company_name?.toLowerCase().includes(searchQuery);
+          if (!matchName && !matchBrand) return false;
+        }
+        return true;
+      }).sort((a, b) => {
+        if (sortBy === 'price-asc') {
+          return getFinalPrice(a) - getFinalPrice(b);
+        }
+        if (sortBy === 'price-desc') {
+          return getFinalPrice(b) - getFinalPrice(a);
+        }
+        if (sortBy === 'rating-desc') {
+          return parseFloat(b.rating || 0) - parseFloat(a.rating || 0);
+        }
+        if (sortBy === 'discount-desc') {
+          return (b.disc || 0) - (a.disc || 0);
+        }
+        return (b.id || 0) - (a.id || 0);
+      });
+    }
+
+    // Calculate final price with discount
+    function getFinalPrice(product) {
+      const amount = Number(product.amount) || 0;
+      const discount = Number(product.disc) || 0;
+      if (discount > 0) {
+        return Math.round(amount - (amount * (discount / 100)));
+      }
+      return amount;
+    }
+
+    // Format currency
+    function formatCurrency(num) {
+      return '$' + Number(num).toLocaleString('en-US');
+    }
+
+    // Fallback Image Handler (for pending user URLs)
+    function handleImgError(imgElement, brand, name) {
+      const initials = (brand ? brand.slice(0, 2) : 'LU').toUpperCase();
+      const parent = imgElement.parentElement;
+      imgElement.style.display = 'none';
+
+      let placeholder = parent.querySelector('.card-img-placeholder');
+      if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'card-img-placeholder';
+        placeholder.innerHTML = `
+          <div class="placeholder-icon">${initials}</div>
+          <div class="placeholder-label">${escapeHtml(name)}</div>
+          <div style="font-size: 0.65rem; color: var(--primary); margin-top: 0.35rem;">Image URL Pending</div>
+        `;
+        parent.appendChild(placeholder);
+      }
+    }
+
+    // Render Product Cards
+    function renderProducts() {
+      const grid = document.getElementById('productsGrid');
+      const emptyState = document.getElementById('emptyCatalogState');
+      const filtered = getFilteredProducts();
+
+      if (filtered.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      emptyState.style.display = 'none';
+
+      grid.innerHTML = filtered.map(product => {
+        const finalPrice = getFinalPrice(product);
+        const hasDiscount = (product.disc || 0) > 0;
+        const inStock = Boolean(product.is_avalaible);
+        const rating = product.rating || '5';
+        const hasImg = product.img_url && product.img_url.trim().length > 0;
+
+        return `
+          <article class="product-card" id="product-card-${product.id}">
+            <!-- Media / Image Container -->
+            <div class="card-media-wrapper">
+              <div class="card-badges">
+                ${hasDiscount ? `<span class="badge-discount">${product.disc}% OFF</span>` : '<span></span>'}
+                <span class="badge-stock ${inStock ? 'in-stock' : 'out-stock'}">
+                  <span class="stock-dot"></span>
+                  ${inStock ? 'In Stock' : 'Sold Out'}
+                </span>
+              </div>
+
+              ${hasImg ? `
+                <img 
+                  src="${escapeHtml(product.img_url)}" 
+                  alt="${escapeHtml(product.product_name)}" 
+                  class="card-img" 
+                  loading="lazy"
+                  onerror="handleImgError(this, '${escapeHtml(product.company_name)}', '${escapeHtml(product.product_name)}')"
+                />
+              ` : `
+                <div class="card-img-placeholder">
+                  <div class="placeholder-icon">${(product.company_name || 'LU').slice(0, 2).toUpperCase()}</div>
+                  <div class="placeholder-label">${escapeHtml(product.product_name)}</div>
+                  <div style="font-size: 0.65rem; color: var(--primary); margin-top: 0.35rem;">Image URL Pending</div>
+                </div>
+              `}
+            </div>
+
+            <!-- Details Body -->
+            <div class="card-body">
+              <div class="card-brand">${escapeHtml(product.company_name)}</div>
+              <h3 class="card-title" title="${escapeHtml(product.product_name)}">${escapeHtml(product.product_name)}</h3>
+              
+              <div class="card-rating">
+                <span>★</span>
+                <span class="rating-text">${escapeHtml(rating)} / 5</span>
+              </div>
+
+              <div class="card-price-row">
+                <span class="price-current">${formatCurrency(finalPrice)}</span>
+                ${hasDiscount ? `<span class="price-original">${formatCurrency(product.amount)}</span>` : ''}
+              </div>
+
+              <div class="card-actions">
+                <button 
+                  class="btn-primary" 
+                  onclick="openOrderModal(${product.id})"
+                  ${!inStock ? 'disabled title="Currently unavailable"' : ''}
+                >
+                  <span>⚡</span>
+                  <span>${inStock ? 'Order Now' : 'Out of Stock'}</span>
+                </button>
+
+                <button 
+                  class="btn-icon-secondary" 
+                  title="Add to Shopping Cart" 
+                  onclick="addToCartAction(${product.id})"
+                  ${!inStock ? 'disabled' : ''}
+                >
+                  🛒
+                </button>
+
+                <button 
+                  class="btn-icon-secondary" 
+                  title="View Specs & Details" 
+                  onclick="openQuickView(${product.id})"
+                >
+                  👁️
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // Add to Cart Action
+    function addToCartAction(productId) {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+
+      CartService.addItem(product, 1);
+      Toast.show(`Added "${product.product_name}" to your cart.`, 'success', 'Cart Updated');
+    }
+
+    // Open Order Modal for a single product
+    function openOrderModal(productId) {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+
+      document.getElementById('orderProductId').value = product.id;
+      document.getElementById('modalProductName').textContent = product.product_name;
+      document.getElementById('modalProductBrand').textContent = product.company_name;
+      
+      const finalPrice = getFinalPrice(product);
+      document.getElementById('modalProductPrice').textContent = formatCurrency(finalPrice);
+
+      const thumb = document.getElementById('modalProductThumb');
+      if (product.img_url) {
+        thumb.src = product.img_url;
+        thumb.style.display = 'block';
+        thumb.onerror = () => { thumb.style.display = 'none'; };
+      } else {
+        thumb.style.display = 'none';
+      }
+
+      document.getElementById('orderModal').classList.add('open');
+      document.getElementById('orderUserName').focus();
+    }
+
+    function closeOrderModal() {
+      document.getElementById('orderModal').classList.remove('open');
+      document.getElementById('orderForm').reset();
+    }
+
+    // Submit Order to Supabase order_table
+    async function handleOrderSubmit(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitOrderBtn');
+      const spinner = document.getElementById('submitOrderSpinner');
+      
+      const productId = document.getElementById('orderProductId').value;
+      const userName = document.getElementById('orderUserName').value;
+      const address = document.getElementById('orderAddress').value;
+      const number = document.getElementById('orderNumber').value;
+
+      submitBtn.disabled = true;
+      spinner.style.display = 'inline';
+
+      try {
+        const orderData = {
+          product_id: parseInt(productId, 10),
+          user_name: userName,
+          address: address,
+          number: number ? parseInt(number, 10) : null
+        };
+
+        const result = await OrderService.create(orderData);
+        console.log('Order created successfully in Supabase:', result);
+
+        closeOrderModal();
+        Toast.show(
+          `Thank you ${userName}! Your order for Product #${productId} has been received.`, 
+          'success', 
+          'Order Confirmed 🎉'
+        );
+      } catch (err) {
+        console.error('Failed to submit order to Supabase:', err);
+
+        if (err.isRlsError) {
+          Toast.show(
+            'Row Level Security policy blocked order insertion. Please run the setup script in Admin &gt; Database SQL.', 
+            'error', 
+            'Database Policy Error'
+          );
+        } else if (err.code === '23505') {
+          // Unique primary key conflict on product_id
+          Toast.show(
+            'This product ID already has an order recorded (schema primary key). Check Admin &gt; Orders.', 
+            'warning', 
+            'Order Record Exists'
+          );
+        } else {
+          Toast.show(
+            err.message || 'Failed to place order. Please verify your connection.', 
+            'error', 
+            'Submission Failed'
+          );
+        }
+      } finally {
+        submitBtn.disabled = false;
+        spinner.style.display = 'none';
+      }
+    }
+
+    // Quick View Modal
+    function openQuickView(productId) {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+
+      const finalPrice = getFinalPrice(product);
+      const qvTitle = document.getElementById('qvTitle');
+      const qvBody = document.getElementById('qvBody');
+
+      qvTitle.textContent = product.product_name;
+      qvBody.innerHTML = `
+        <div style="display: flex; gap: 1.5rem; flex-direction: column;">
+          <div style="width: 100%; height: 260px; background: #0b111e; border-radius: var(--radius-md); overflow: hidden; position: relative;">
+            ${product.img_url ? `
+              <img src="${escapeHtml(product.img_url)}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'">
+            ` : `
+              <div style="display: flex; height: 100%; align-items: center; justify-content: center; color: var(--text-muted);">Image URL pending</div>
+            `}
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.85rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">
+                ${escapeHtml(product.company_name)}
+              </span>
+              <span style="font-size: 0.85rem; color: #fbbf24;">★ ${escapeHtml(product.rating || '5')} Rating</span>
+            </div>
+
+            <div style="font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+              ${formatCurrency(finalPrice)}
+              ${product.disc > 0 ? `<span style="font-size: 1rem; color: var(--text-muted); text-decoration: line-through; margin-left: 0.5rem;">${formatCurrency(product.amount)}</span>` : ''}
+            </div>
+
+            <div style="background: var(--bg-surface-elevated); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); margin-bottom: 1.5rem;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                <strong>Availability:</strong> ${product.is_avalaible ? '<span style="color: var(--success);">In Stock (Immediate Dispatch)</span>' : '<span style="color: var(--danger);">Out of Stock</span>'}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                <strong>Product ID:</strong> #${product.id}
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+              <button 
+                class="btn-primary" 
+                style="flex: 1;" 
+                onclick="closeQuickView(); openOrderModal(${product.id})"
+                ${!product.is_avalaible ? 'disabled' : ''}
+              >
+                Order Now
+              </button>
+              <button 
+                class="btn-icon-secondary" 
+                style="padding: 0 1.25rem;" 
+                onclick="addToCartAction(${product.id})"
+                ${!product.is_avalaible ? 'disabled' : ''}
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('quickViewModal').classList.add('open');
+    }
+
+    function closeQuickView() {
+      document.getElementById('quickViewModal').classList.remove('open');
+    }
+
+    // Cart Drawer Controls
+    function openCart() {
+      renderCartItems();
+      document.getElementById('cartOverlay').classList.add('open');
+    }
+
+    function closeCart() {
+      document.getElementById('cartOverlay').classList.remove('open');
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target.id === 'cartOverlay') {
+        closeCart();
+      }
+    }
+
+    function updateCartUI() {
+      const count = CartService.getCount();
+      const badge = document.getElementById('cartCount');
+      badge.textContent = count;
+      renderCartItems();
+    }
+
+    function renderCartItems() {
+      const list = document.getElementById('cartItemsList');
+      const items = CartService.getItems();
+      const total = CartService.getTotal();
+
+      document.getElementById('cartSubtotal').textContent = formatCurrency(total);
+      document.getElementById('cartTotal').textContent = formatCurrency(total);
+
+      if (items.length === 0) {
+        list.innerHTML = `
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛍️</div>
+            <p>Your shopping bag is currently empty.</p>
+          </div>
+        `;
+        document.getElementById('checkoutBtn').disabled = true;
+        return;
+      }
+
+      document.getElementById('checkoutBtn').disabled = false;
+      list.innerHTML = items.map(item => {
+        const itemPrice = item.disc > 0 
+          ? item.amount - (item.amount * (item.disc / 100))
+          : item.amount;
+
+        return `
+          <div class="cart-item">
+            ${item.img_url ? `
+              <img src="${escapeHtml(item.img_url)}" class="cart-item-img" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'">
+            ` : `
+              <div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.7rem;">ITEM</div>
+            `}
+            <div class="cart-item-info">
+              <div class="cart-item-name">${escapeHtml(item.product_name)}</div>
+              <div class="cart-item-price">${formatCurrency(itemPrice)}</div>
+              <div class="cart-qty-controls">
+                <button class="qty-btn" onclick="CartService.updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                <span class="qty-count">${item.quantity}</span>
+                <button class="qty-btn" onclick="CartService.updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+              </div>
+            </div>
+            <button class="cart-item-remove" onclick="CartService.removeItem(${item.id})" title="Remove item">&times;</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Checkout from Cart
+    function checkoutFromCart() {
+      const items = CartService.getItems();
+      if (items.length === 0) return;
+
+      closeCart();
+      // Open order modal for first item
+      openOrderModal(items[0].id);
+    }
+
+    // Seed Demo Catalog (helper action)
+    async function seedDemoCatalog() {
+      try {
+        await ProductService.seedDemoData();
+        Toast.show('Sample products successfully seeded into Supabase!', 'success', 'Catalog Seeded');
+        await loadProducts();
+      } catch (err) {
+        console.error('Seeding error:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Seeding Error');
+      }
+    }
+
+    // Utility: HTML escape
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>

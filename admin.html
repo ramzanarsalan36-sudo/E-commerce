@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin & Orders Command Center | LUMEN LUXE</title>
+  <meta name="description" content="Manage products, upload and update image URLs, review incoming customer orders, and configure database settings.">
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Supabase JS SDK (Official CDN v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Ambient glows -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand-logo" id="adminBrandLink">
+        <div class="brand-icon">⚡</div>
+        <span>LUMEN<span style="color: var(--primary);">LUXE</span></span>
+        <span class="brand-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border-color: rgba(16, 185, 129, 0.3);">
+          ADMIN PORTAL
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <a href="index.html" class="nav-link" title="Return to Storefront">
+          <span>← Back to Storefront</span>
+        </a>
+
+        <button onclick="refreshData()" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" title="Refresh data from Supabase">
+          <span id="refreshSpinner">🔄</span>
+          <span>Refresh Data</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Admin Dashboard -->
+  <main class="main-container" style="padding-top: 2rem;">
+    <!-- Admin Header & KPI Stat Cards -->
+    <div class="admin-header">
+      <div class="admin-title-row">
+        <div>
+          <h1 style="font-family: var(--font-display); font-size: 2rem; font-weight: 700; letter-spacing: -0.02em;">
+            Commerce Command Center
+          </h1>
+          <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
+            Direct management for Supabase tables: <code>public.product</code> &amp; <code>public.order_table</code>
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+          <button onclick="openAddProductModal()" class="btn-primary">
+            <span>+</span>
+            <span>Add New Product</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Statistics Cards -->
+      <div class="admin-stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon">📦</div>
+          <div class="stat-card-info">
+            <span class="stat-card-val" id="statTotalProducts">0</span>
+            <span class="stat-card-lbl">Total Catalog Products</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-icon" style="color: var(--success); background: var(--success-bg);">✅</div>
+          <div class="stat-card-info">
+            <span class="stat-card-val" id="statInStock">0</span>
+            <span class="stat-card-lbl">Available in Stock</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-icon" style="color: var(--accent-cyan); background: rgba(6, 182, 212, 0.15);">🛍️</div>
+          <div class="stat-card-info">
+            <span class="stat-card-val" id="statTotalOrders">0</span>
+            <span class="stat-card-lbl">Customer Orders</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-icon" style="color: var(--warning); background: var(--warning-bg);">🖼️</div>
+          <div class="stat-card-info">
+            <span class="stat-card-val" id="statPendingImages">0</span>
+            <span class="stat-card-lbl">Images Pending URL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="admin-tabs" aria-label="Admin Navigation Tabs">
+      <button class="tab-btn active" id="tabBtnProducts" onclick="switchTab('products')">
+        📦 Products &amp; Image URLs (<span id="tabCountProducts">0</span>)
+      </button>
+      <button class="tab-btn" id="tabBtnOrders" onclick="switchTab('orders')">
+        📋 Customer Orders (<span id="tabCountOrders">0</span>)
+      </button>
+      <button class="tab-btn" id="tabBtnDatabase" onclick="switchTab('database')">
+        ⚙️ Database &amp; SQL Setup
+      </button>
+    </nav>
+
+    <!-- ======================================================================
+         TAB 1: PRODUCTS & IMAGE MANAGER
+         Solves: "i will upload url of image after generat page"
+         ====================================================================== -->
+    <section id="tabProductsContent">
+      <!-- Quick Image Notice / Helper Bar -->
+      <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <strong style="color: #a5b4fc; font-size: 0.95rem;">🖼️ Image URL Manager:</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">
+            Click <strong>"Edit Image URL"</strong> on any product to paste your hosted image link. Changes sync live to Supabase!
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="seedDemoCatalog()" class="chip-btn" title="Populate database with sample items">
+            🌱 Seed Sample Products
+          </button>
+        </div>
+      </div>
+
+      <!-- Products Data Table -->
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">ID</th>
+              <th style="width: 90px;">Image</th>
+              <th>Product &amp; Brand</th>
+              <th>Price</th>
+              <th>Discount</th>
+              <th>Rating</th>
+              <th>Availability</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="productsTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                Loading products from Supabase...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 2: CUSTOMER ORDERS (from public.order_table)
+         ====================================================================== -->
+    <section id="tabOrdersContent" style="display: none;">
+      <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+          Incoming orders placed by customers from the storefront (<code>public.order_table</code>).
+        </p>
+        <span class="brand-badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
+          LIVE DATABASE VIEW
+        </span>
+      </div>
+
+      <!-- Orders Data Table -->
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Order / Product ID</th>
+              <th>Customer Name</th>
+              <th>Phone Number</th>
+              <th>Delivery Address</th>
+              <th>Order Date</th>
+              <th>Ordered Item</th>
+              <th style="text-align: right;">Status / Action</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                Loading orders from Supabase...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 3: DATABASE & SQL SETUP HELPER
+         ====================================================================== -->
+    <section id="tabDatabaseContent" style="display: none;">
+      <div class="sql-helper-box">
+        <h2 style="font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 0.5rem;">
+          Supabase Row Level Security (RLS) Configuration
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.25rem;">
+          Supabase enables Row Level Security (RLS) on newly created tables by default. If your inserts or updates fail with code <code>42501</code>, simply run the following SQL script in your Supabase SQL Editor.
+        </p>
+
+        <div class="code-block-wrapper">
+          <button class="copy-code-btn" onclick="copySqlScript(this)">📋 Copy SQL</button>
+          <pre class="code-block" id="sqlSnippet">-- 1. Enable RLS and permissive policies for 'product'
+ALTER TABLE public.product ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view products" ON public.product FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public can insert products" ON public.product FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public can update products" ON public.product FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Public can delete products" ON public.product FOR DELETE TO anon, authenticated USING (true);
+
+-- 2. Enable RLS and permissive policies for 'order_table'
+ALTER TABLE public.order_table ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view orders" ON public.order_table FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public can place orders" ON public.order_table FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public can update orders" ON public.order_table FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Public can delete orders" ON public.order_table FOR DELETE TO anon, authenticated USING (true);</pre>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-sm); padding: 1rem; margin-top: 1.5rem;">
+          <strong style="color: #fbbf24; font-size: 0.85rem;">💡 Pro-Tip for Schema Architecture:</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem; line-height: 1.5;">
+            In your schema, <code>product_id</code> is marked as the Primary Key of <code>order_table</code>. In a production store, you usually want each customer order to have its own unique <code>id</code> so that multiple customers can purchase the same product without a primary key collision. You can adjust this in the Supabase Table Editor if you desire unlimited orders per product.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================================
+       MODAL: UPDATE IMAGE URL (Dedicated Quick Action)
+       ====================================================================== -->
+  <div class="modal-overlay" id="imageUrlModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title">Update Product Image URL</h2>
+        <button class="modal-close" onclick="closeImageUrlModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Paste any image URL (e.g. from Unsplash, Imgur, Cloudinary, or your hosted CDN).
+        </p>
+
+        <!-- Product preview -->
+        <div style="font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);" id="imgModalProductName">
+          Product Name
+        </div>
+
+        <form id="imageUrlForm" onsubmit="handleImageUrlSubmit(event)">
+          <input type="hidden" id="imgModalProductId">
+
+          <div class="form-group">
+            <label class="form-label" for="imgModalInput">Image URL *</label>
+            <input 
+              type="url" 
+              id="imgModalInput" 
+              class="form-control" 
+              placeholder="https://images.unsplash.com/photo-..." 
+              required
+              oninput="previewModalImage(this.value)"
+            >
+          </div>
+
+          <!-- Live Preview Box -->
+          <div class="form-group">
+            <label class="form-label">Live Preview</label>
+            <div style="width: 100%; height: 180px; background: #070b14; border: 1px dashed var(--border-medium); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+              <img id="imgLivePreview" src="" alt="Preview" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
+              <span id="imgPreviewPlaceholder" style="font-size: 0.8rem; color: var(--text-muted);">Enter a valid URL above to preview</span>
+            </div>
+          </div>
+
+          <!-- Quick presets for testing -->
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.4rem;">Or choose a high-res sample:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+              <button type="button" class="chip-btn" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="applyPresetUrl('https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80')">Smartphone</button>
+              <button type="button" class="chip-btn" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="applyPresetUrl('https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80')">Headphones</button>
+              <button type="button" class="chip-btn" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="applyPresetUrl('https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=800&q=80')">Smartwatch</button>
+              <button type="button" class="chip-btn" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="applyPresetUrl('https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=800&q=80')">Sneakers</button>
+              <button type="button" class="chip-btn" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="applyPresetUrl('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80')">Camera</button>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; background: transparent;">
+            <button type="button" class="nav-link" onclick="closeImageUrlModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="saveImageBtn">Save Image URL</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: ADD / EDIT PRODUCT
+       ====================================================================== -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="productModalTitle">Add New Product</h2>
+        <button class="modal-close" onclick="closeProductModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="productForm" onsubmit="handleProductFormSubmit(event)">
+          <input type="hidden" id="formProductId">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="formCompanyName">Company / Brand *</label>
+              <input type="text" id="formCompanyName" class="form-control" placeholder="e.g. Apple, Sony, Nike" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="formRating">Rating (1 - 5)</label>
+              <input type="text" id="formRating" class="form-control" placeholder="5" value="5">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="formProductName">Product Name *</label>
+            <input type="text" id="formProductName" class="form-control" placeholder="e.g. AirPods Max Silver" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="formImgUrl">Image URL</label>
+            <input 
+              type="text" 
+              id="formImgUrl" 
+              class="form-control" 
+              placeholder="https://... (or leave empty to set later)"
+            >
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="formAmount">Price (Amount) *</label>
+              <input type="number" id="formAmount" class="form-control" placeholder="e.g. 549" min="1" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="formDisc">Discount (%)</label>
+              <input type="number" id="formDisc" class="form-control" placeholder="e.g. 15 (0 if none)" min="0" max="99" value="0">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.5rem;">
+            <label class="toggle-filter">
+              <input type="checkbox" id="formIsAvailable" checked>
+              <span style="color: var(--text-primary); font-weight: 600;">Product is available in stock (is_avalaible)</span>
+            </label>
+          </div>
+
+          <div class="modal-footer" style="padding-left: 0; padding-right: 0; background: transparent; margin-top: 1.5rem;">
+            <button type="button" class="nav-link" onclick="closeProductModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="saveProductBtn">Save Product to Supabase</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="supabase-client.js"></script>
+  <script>
+    let productsList = [];
+    let ordersList = [];
+    let currentTab = 'products';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check URL hash for direct tab linking
+      if (window.location.hash === '#orders') {
+        switchTab('orders');
+      } else if (window.location.hash === '#database') {
+        switchTab('database');
+      }
+
+      await refreshData();
+    });
+
+    // Tab switcher
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      document.getElementById('tabProductsContent').style.display = tab === 'products' ? 'block' : 'none';
+      document.getElementById('tabOrdersContent').style.display = tab === 'orders' ? 'block' : 'none';
+      document.getElementById('tabDatabaseContent').style.display = tab === 'database' ? 'block' : 'none';
+
+      document.getElementById('tabBtnProducts').classList.toggle('active', tab === 'products');
+      document.getElementById('tabBtnOrders').classList.toggle('active', tab === 'orders');
+      document.getElementById('tabBtnDatabase').classList.toggle('active', tab === 'database');
+
+      window.location.hash = tab;
+    }
+
+    // Refresh Data from Supabase
+    async function refreshData() {
+      const spinner = document.getElementById('refreshSpinner');
+      spinner.style.display = 'inline-block';
+
+      try {
+        await Promise.all([loadProducts(), loadOrders()]);
+        updateKpis();
+      } catch (err) {
+        console.error('Failed to refresh data', err);
+      } finally {
+        spinner.style.display = 'none';
+      }
+    }
+
+    // Load Products
+    async function loadProducts() {
+      try {
+        productsList = await ProductService.getAll();
+        renderProductsTable();
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        // Fallback for visual guidance
+        productsList = [];
+        renderProductsTable(err);
+      }
+    }
+
+    // Load Orders
+    async function loadOrders() {
+      try {
+        ordersList = await OrderService.getAll();
+        renderOrdersTable();
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        ordersList = [];
+        renderOrdersTable(err);
+      }
+    }
+
+    // Update KPI Counters
+    function updateKpis() {
+      document.getElementById('statTotalProducts').textContent = productsList.length;
+      document.getElementById('tabCountProducts').textContent = productsList.length;
+
+      const inStock = productsList.filter(p => p.is_avalaible).length;
+      document.getElementById('statInStock').textContent = inStock;
+
+      document.getElementById('statTotalOrders').textContent = ordersList.length;
+      document.getElementById('tabCountOrders').textContent = ordersList.length;
+
+      const pendingImgs = productsList.filter(p => !p.img_url || p.img_url.trim().length === 0).length;
+      document.getElementById('statPendingImages').textContent = pendingImgs;
+    }
+
+    // Render Products Table
+    function renderProductsTable(error = null) {
+      const tbody = document.getElementById('productsTableBody');
+      
+      if (error) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="padding: 2.5rem; text-align: center; color: var(--danger);">
+              <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">⚠️ Failed to load products</div>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 500px; margin: 0 auto 1rem auto;">
+                ${escapeHtml(error.userFriendlyMessage || error.message)}
+              </p>
+              <button onclick="switchTab('database')" class="btn-primary" style="margin: 0 auto; font-size: 0.8rem;">
+                Open SQL Setup Helper
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      if (productsList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+              <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</div>
+              <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">No products found in database</h3>
+              <p style="font-size: 0.85rem; margin-bottom: 1.25rem;">Create your first product or click below to populate demo products.</p>
+              <button onclick="seedDemoCatalog()" class="btn-primary" style="margin: 0 auto; font-size: 0.85rem;">
+                Seed Demo Products
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = productsList.map(product => {
+        const hasImg = product.img_url && product.img_url.trim().length > 0;
+        const discount = product.disc || 0;
+
+        return `
+          <tr>
+            <td style="font-family: monospace; font-weight: 700; color: var(--text-muted);">#${product.id}</td>
+            <td>
+              ${hasImg ? `
+                <img src="${escapeHtml(product.img_url)}" class="table-thumb" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'">
+              ` : `
+                <div class="table-thumb" style="display:flex;align-items:center;justify-content:center;background:#0d1424;color:var(--text-muted);font-size:0.65rem;border:1px dashed var(--border-subtle);">
+                  No URL
+                </div>
+              `}
+            </td>
+            <td>
+              <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(product.product_name)}</div>
+              <div style="font-size: 0.75rem; color: var(--primary); font-weight: 600; text-transform: uppercase;">
+                ${escapeHtml(product.company_name)}
+              </div>
+            </td>
+            <td style="font-family: var(--font-display); font-weight: 700; color: var(--text-primary);">
+              $${Number(product.amount).toLocaleString()}
+            </td>
+            <td>
+              ${discount > 0 ? `<span class="badge-discount" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">${discount}% OFF</span>` : '<span style="color:var(--text-muted);">-</span>'}
+            </td>
+            <td>
+              <span style="color: #fbbf24;">★</span> ${escapeHtml(product.rating || '5')}
+            </td>
+            <td>
+              <button 
+                class="badge-stock ${product.is_avalaible ? 'in-stock' : 'out-stock'}" 
+                style="cursor: pointer; border: none;"
+                onclick="toggleAvailability(${product.id}, ${!product.is_avalaible})"
+                title="Click to toggle stock status"
+              >
+                <span class="stock-dot"></span>
+                ${product.is_avalaible ? 'In Stock' : 'Out of Stock'}
+              </button>
+            </td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; gap: 0.4rem;">
+                <button 
+                  class="chip-btn" 
+                  style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.3);"
+                  onclick="openImageUrlModal(${product.id})"
+                  title="Upload / Change Image URL"
+                >
+                  🖼️ Image URL
+                </button>
+                <button 
+                  class="btn-icon-secondary" 
+                  style="width: 32px; height: 32px; font-size: 0.85rem;" 
+                  onclick="openEditProductModal(${product.id})"
+                  title="Edit details"
+                >
+                  ✏️
+                </button>
+                <button 
+                  class="btn-icon-secondary" 
+                  style="width: 32px; height: 32px; font-size: 0.85rem; color: var(--danger);" 
+                  onclick="deleteProductAction(${product.id})"
+                  title="Delete product"
+                >
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Orders Table
+    function renderOrdersTable(error = null) {
+      const tbody = document.getElementById('ordersTableBody');
+
+      if (error) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="padding: 2.5rem; text-align: center; color: var(--danger);">
+              <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">⚠️ Failed to load orders</div>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 500px; margin: 0 auto 1rem auto;">
+                ${escapeHtml(error.userFriendlyMessage || error.message)}
+              </p>
+              <button onclick="switchTab('database')" class="btn-primary" style="margin: 0 auto; font-size: 0.8rem;">
+                Check Database Setup
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      if (ordersList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+              <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📋</div>
+              <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">No customer orders yet</h3>
+              <p style="font-size: 0.85rem;">Orders placed on the storefront will appear here instantly in real-time.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = ordersList.map(order => {
+        // Cross-reference product name from productsList
+        const product = productsList.find(p => p.id === order.product_id);
+        const orderDate = order.created_at ? new Date(order.created_at).toLocaleString() : 'Just now';
+
+        return `
+          <tr>
+            <td style="font-family: monospace; font-weight: 700;">
+              <span style="color: var(--primary);">#ORD-${order.product_id}</span>
+            </td>
+            <td style="font-weight: 700; color: var(--text-primary);">
+              ${escapeHtml(order.user_name)}
+            </td>
+            <td style="font-family: monospace; color: var(--text-secondary);">
+              ${order.number ? escapeHtml(order.number) : '<span style="color:var(--text-muted);">N/A</span>'}
+            </td>
+            <td style="max-width: 250px; line-height: 1.4; font-size: 0.85rem;">
+              ${escapeHtml(order.address)}
+            </td>
+            <td style="font-size: 0.8rem; color: var(--text-muted);">
+              ${orderDate}
+            </td>
+            <td>
+              ${product ? `
+                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">${escapeHtml(product.product_name)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">$${Number(product.amount).toLocaleString()}</div>
+              ` : `
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Product #${order.product_id}</span>
+              `}
+            </td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <span class="badge-stock in-stock" style="font-size: 0.7rem;">Confirmed</span>
+                <button 
+                  class="btn-icon-secondary" 
+                  style="width: 28px; height: 28px; font-size: 0.75rem; color: var(--danger);" 
+                  onclick="deleteOrderAction(${order.product_id})"
+                  title="Remove order record"
+                >
+                  &times;
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ========================================================================
+    // Dedicated Image URL Modal Logic
+    // ========================================================================
+    function openImageUrlModal(productId) {
+      const product = productsList.find(p => p.id === productId);
+      if (!product) return;
+
+      document.getElementById('imgModalProductId').value = product.id;
+      document.getElementById('imgModalProductName').textContent = `#${product.id} - ${product.product_name}`;
+      
+      const input = document.getElementById('imgModalInput');
+      input.value = product.img_url || '';
+      previewModalImage(input.value);
+
+      document.getElementById('imageUrlModal').classList.add('open');
+      input.focus();
+    }
+
+    function closeImageUrlModal() {
+      document.getElementById('imageUrlModal').classList.remove('open');
+    }
+
+    function previewModalImage(url) {
+      const img = document.getElementById('imgLivePreview');
+      const placeholder = document.getElementById('imgPreviewPlaceholder');
+
+      if (url && url.trim().length > 5) {
+        img.src = url.trim();
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        img.onerror = () => {
+          img.style.display = 'none';
+          placeholder.style.display = 'block';
+          placeholder.textContent = '❌ Unable to load image from this URL';
+        };
+        img.onload = () => {
+          placeholder.style.display = 'none';
+        };
+      } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+        placeholder.textContent = 'Enter a valid URL above to preview';
+      }
+    }
+
+    function applyPresetUrl(url) {
+      const input = document.getElementById('imgModalInput');
+      input.value = url;
+      previewModalImage(url);
+    }
+
+    async function handleImageUrlSubmit(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveImageBtn');
+      const productId = document.getElementById('imgModalProductId').value;
+      const newUrl = document.getElementById('imgModalInput').value;
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        await ProductService.updateImageUrl(productId, newUrl);
+        Toast.show(`Image URL updated for Product #${productId}`, 'success', 'Image Saved');
+        closeImageUrlModal();
+        await refreshData();
+      } catch (err) {
+        console.error('Failed to update image URL:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Update Failed');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Image URL';
+      }
+    }
+
+    // ========================================================================
+    // Product Add / Edit Modal Logic
+    // ========================================================================
+    function openAddProductModal() {
+      document.getElementById('productModalTitle').textContent = 'Add New Product';
+      document.getElementById('productForm').reset();
+      document.getElementById('formProductId').value = '';
+      document.getElementById('formRating').value = '5';
+      document.getElementById('formDisc').value = '0';
+      document.getElementById('formIsAvailable').checked = true;
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function openEditProductModal(productId) {
+      const product = productsList.find(p => p.id === productId);
+      if (!product) return;
+
+      document.getElementById('productModalTitle').textContent = `Edit Product #${product.id}`;
+      document.getElementById('formProductId').value = product.id;
+      document.getElementById('formCompanyName').value = product.company_name;
+      document.getElementById('formProductName').value = product.product_name;
+      document.getElementById('formImgUrl').value = product.img_url || '';
+      document.getElementById('formAmount').value = product.amount;
+      document.getElementById('formDisc').value = product.disc || 0;
+      document.getElementById('formRating').value = product.rating || '5';
+      document.getElementById('formIsAvailable').checked = Boolean(product.is_avalaible);
+
+      document.getElementById('productModal').classList.add('open');
+    }
+
+    function closeProductModal() {
+      document.getElementById('productModal').classList.remove('open');
+    }
+
+    async function handleProductFormSubmit(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveProductBtn');
+      const formId = document.getElementById('formProductId').value;
+
+      const productData = {
+        company_name: document.getElementById('formCompanyName').value,
+        product_name: document.getElementById('formProductName').value,
+        img_url: document.getElementById('formImgUrl').value,
+        amount: document.getElementById('formAmount').value,
+        disc: document.getElementById('formDisc').value || 0,
+        rating: document.getElementById('formRating').value || '5',
+        is_avalaible: document.getElementById('formIsAvailable').checked
+      };
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving to Database...';
+
+      try {
+        if (formId) {
+          // Update
+          await ProductService.update(formId, productData);
+          Toast.show(`Updated product "${productData.product_name}"`, 'success', 'Product Updated');
+        } else {
+          // Create
+          await ProductService.create(productData);
+          Toast.show(`Created new product "${productData.product_name}"`, 'success', 'Product Created');
+        }
+        closeProductModal();
+        await refreshData();
+      } catch (err) {
+        console.error('Failed to save product:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Operation Failed');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Product to Supabase';
+      }
+    }
+
+    // Toggle Availability directly from table
+    async function toggleAvailability(productId, newStatus) {
+      try {
+        await ProductService.update(productId, { is_avalaible: newStatus });
+        Toast.show(`Product #${productId} is now ${newStatus ? 'In Stock' : 'Out of Stock'}`, 'info', 'Stock Toggled');
+        await refreshData();
+      } catch (err) {
+        console.error('Toggle error:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Stock Update Failed');
+      }
+    }
+
+    // Delete Product
+    async function deleteProductAction(productId) {
+      if (!confirm(`Are you sure you want to delete Product #${productId}?`)) return;
+
+      try {
+        await ProductService.delete(productId);
+        Toast.show(`Product #${productId} has been removed.`, 'success', 'Deleted');
+        await refreshData();
+      } catch (err) {
+        console.error('Delete error:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Delete Failed');
+      }
+    }
+
+    // Delete Order
+    async function deleteOrderAction(productId) {
+      if (!confirm(`Delete order for Product #${productId}?`)) return;
+
+      try {
+        await OrderService.delete(productId);
+        Toast.show(`Order record for Product #${productId} removed.`, 'success', 'Order Deleted');
+        await refreshData();
+      } catch (err) {
+        console.error('Order delete error:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Delete Failed');
+      }
+    }
+
+    // Seed Demo Catalog
+    async function seedDemoCatalog() {
+      try {
+        await ProductService.seedDemoData();
+        Toast.show('Sample products seeded into Supabase!', 'success', 'Seeding Complete');
+        await refreshData();
+      } catch (err) {
+        console.error('Seeding error:', err);
+        Toast.show(err.userFriendlyMessage || err.message, 'error', 'Seeding Error');
+      }
+    }
+
+    // Copy SQL Script
+    function copySqlScript(btn) {
+      const code = document.getElementById('sqlSnippet').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy SQL'; }, 2000);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
